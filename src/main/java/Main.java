@@ -8,7 +8,7 @@ import java.io.IOException;
 public class Main {
     public static void main(String[] args) {
         JFileChooser fileChooser = new JFileChooser();
-        int result = fileChooser.showOpenDialog(null);
+        fileChooser.showOpenDialog(null);
         File file = fileChooser.getSelectedFile();
 
         try {

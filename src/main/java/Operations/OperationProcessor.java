@@ -13,7 +13,8 @@ public class OperationProcessor {
 
     public OperationProcessor(File jsonFile) throws IOException {
         ObjectMapper mapper = new ObjectMapper();
-        this.operations = mapper.readValue(jsonFile, new TypeReference<List<Operation>>(){});
+        this.operations = mapper.readValue(jsonFile, new TypeReference<>() {
+        });
     }
 
     public void applyOperations(Image image) {
