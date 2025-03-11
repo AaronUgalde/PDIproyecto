@@ -1,29 +1,33 @@
 package Operations.Histogram;
 
-import GUI.ImageInterface;
 import Model.Image;
 import NoImageOperation.RGBtoHSI;
 import NoImageOperation.RGBtoHSV;
 import NoImageOperation.RGBtoYIQ;
 import Operations.Operation;
-import Operations.RGB.ColorChannel;
-import Operations.RGB.RGB;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import javax.imageio.ImageIO;
 
 import static NoImageOperation.HelpFunctions.getChanel;
-import static NoImageOperation.HelpFunctions.imageToMatrix;
+import static NoImageOperation.HelpFunctions.getRGBinArray;
 
 public class Histogram implements Operation {
 
     private final TypeOfHistogram typeOfHistogram;
+    private static final int HIST_WIDTH = 512;
+    private static final int HIST_HEIGHT = 400;
+    private static final int MARGIN = 40;
+    private static final int GRAPH_WIDTH = HIST_WIDTH - (2 * MARGIN);
+    private static final int GRAPH_HEIGHT = HIST_HEIGHT - (2 * MARGIN);
 
     @JsonCreator
     public Histogram(@JsonProperty("chanel") TypeOfHistogram typeOfHistogram) {
@@ -33,60 +37,66 @@ public class Histogram implements Operation {
     @Override
     public void apply(Image image) {
         BufferedImage histImage = null;
+        int[] histogram = null;
+        Color barColor = Color.BLACK;
+        String title = "Histogram";
 
         switch (typeOfHistogram) {
             case Y: {
                 double[][][] yiqImage = RGBtoYIQ.apply(image);
-                // Se extrae el canal Y (índice 0) de la imagen YIQ
                 double[][] channel = getChanel(yiqImage, 0);
-                histImage = plotHist(getHist(channel));
+                histogram = getHistFromDoubleChannel(channel, 255);
+                barColor = new Color(50, 50, 50);
+                title = "Y Channel Histogram (YIQ)";
                 break;
             }
             case V: {
                 double[][][] hsvImage = RGBtoHSV.apply(image);
-                // Se extrae el canal V (valor) de la imagen HSV
-                double[][] channel = getChanel(hsvImage, 0);
-                histImage = plotHist(getHist(channel));
+                double[][] channel = getChanel(hsvImage, 2); // V is index 2
+                histogram = getHistFromDoubleChannel(channel, 255);
+                barColor = new Color(75, 75, 75);
+                title = "V Channel Histogram (HSV)";
                 break;
             }
             case I: {
                 double[][][] hsiImage = RGBtoHSI.apply(image);
-                // Se extrae el canal I (intensidad) de la imagen HSI; en este caso se usa el canal de índice 2
-                double[][] channel = getChanel(hsiImage, 2);
-                histImage = plotHist(getHist(channel));
+                double[][] channel = getChanel(hsiImage, 2); // I is index 2
+                histogram = getHistFromDoubleChannel(channel, 255);
+                barColor = new Color(100, 100, 100);
+                title = "I Channel Histogram (HSI)";
                 break;
             }
             case RED: {
-                RGB red = new RGB(ColorChannel.RED);
-                red.apply(image);
-                int[][] redChannel = imageToMatrix(image);
-                histImage = plotHist(getHist(redChannel));
+                histogram = calculateRGBHistogram(image, 0);
+                barColor = new Color(220, 0, 0);
+                title = "Red Channel Histogram";
                 break;
             }
             case GREEN: {
-                RGB green = new RGB(ColorChannel.GREEN);
-                green.apply(image);
-                int[][] greenChannel = imageToMatrix(image);
-                histImage = plotHist(getHist(greenChannel));
+                histogram = calculateRGBHistogram(image, 1);
+                barColor = new Color(0, 180, 0);
+                title = "Green Channel Histogram";
                 break;
             }
             case BLUE: {
-                RGB blue = new RGB(ColorChannel.BLUE);
-                blue.apply(image);
-                ImageInterface blueImage = new ImageInterface(image, 200, 200);
-                int[][] blueChannel = imageToMatrix(image);
-                histImage = plotHist(getHist(blueChannel));
+                histogram = calculateRGBHistogram(image, 2);
+                barColor = new Color(0, 0, 220);
+                title = "Blue Channel Histogram";
                 break;
             }
             default:
-                throw new UnsupportedOperationException("Tipo de histograma no soportado: " + typeOfHistogram);
+                throw new UnsupportedOperationException("Unsupported histogram type: " + typeOfHistogram);
         }
 
-        // Guarda la imagen del histograma en un archivo PNG
+        if (histogram != null) {
+            histImage = plotHistogram(histogram, barColor, title);
+        }
+
         try {
             String fileName = "histogram_" + typeOfHistogram + ".png";
-            ImageIO.write(histImage, "png", new File(fileName));
-            System.out.println("Imagen del histograma guardada como: " + fileName);
+            File outputFile = new File(fileName);
+            ImageIO.write(histImage, "png", outputFile);
+            System.out.println("Histogram image saved as: " + fileName);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -94,92 +104,95 @@ public class Histogram implements Operation {
         image.setBufferedImage(histImage);
     }
 
-    /**
-     * Calcula el histograma a partir de una matriz de valores double.
-     *
-     * @param channel Matriz con valores de intensidad.
-     * @return Arreglo de 256 posiciones con la frecuencia de cada nivel (0 a 255).
-     */
-    private static int[] getHist(double[][] channel) {
-        int width = channel.length;
-        int height = channel[0].length;
-        int[] hist = new int[256];
+    private int[] calculateRGBHistogram(Image image, int channelIndex) {
+        int[] histogram = new int[256];
+        BufferedImage originalImage = image.getImage();
+        int width = originalImage.getWidth();
+        int height = originalImage.getHeight();
 
-        for (int i = 0; i < width; i++) {
-            for (int j = 0; j < height; j++) {
-                // Se redondea el valor a entero y se asegura que esté en [0,255]
-                int value = (int) Math.round(channel[i][j]);
-                value = Math.max(0, Math.min(255, value));
-                hist[value]++;
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int pixel = originalImage.getRGB(x, y);
+                int[] rgb = getRGBinArray(pixel);
+                histogram[rgb[channelIndex]]++;
             }
         }
-        return hist;
+        return histogram;
     }
 
-    /**
-     * Calcula el histograma a partir de una matriz de valores enteros.
-     *
-     * @param channel Matriz con valores de intensidad.
-     * @return Arreglo de 256 posiciones con la frecuencia de cada nivel (0 a 255).
-     */
-    private static int[] getHist(int[][] channel) {
-        int width = channel.length;
-        int height = channel[0].length;
-        int[] hist = new int[256];
+    private int[] getHistFromDoubleChannel(double[][] channel, double maxVal) {
+        int[] histogram = new int[256];
+        int height = channel.length;
+        int width = channel[0].length;
 
-        for (int i = 0; i < width; i++) {
-            for (int j = 0; j < height; j++) {
-                int value = channel[i][j];
-                System.out.println("value: " + value);
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int value = (int) Math.round((channel[y][x] / maxVal) * 255);
                 value = Math.max(0, Math.min(255, value));
-                hist[value]++;
+                histogram[value]++;
             }
         }
-        return hist;
+        return histogram;
     }
 
-    /**
-     * Genera una imagen del histograma a partir de un arreglo de frecuencias.
-     *
-     * @param hist Arreglo de 256 posiciones con la frecuencia de cada nivel.
-     * @return BufferedImage con el histograma dibujado.
-     */
-    private static BufferedImage plotHist(int[] hist) {
-        final int imageWidth = 512;  // Ancho de la imagen del histograma
-        final int imageHeight = 400; // Alto de la imagen del histograma
+    private BufferedImage plotHistogram(int[] histogram, Color barColor, String title) {
+        BufferedImage histImage = new BufferedImage(HIST_WIDTH, HIST_HEIGHT, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g2d = histImage.createGraphics();
 
-        BufferedImage histogramImage = new BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_RGB);
-        Graphics2D g2d = histogramImage.createGraphics();
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        // Fondo blanco para mayor estética
         g2d.setColor(Color.WHITE);
-        g2d.fillRect(0, 0, imageWidth, imageHeight);
+        g2d.fillRect(0, 0, HIST_WIDTH, HIST_HEIGHT);
 
-        // Se busca el valor máximo del histograma para escalar las barras
-        int max = 0;
-        for (int value : hist) {
-            if (value > max) {
-                max = value;
+        g2d.setColor(Color.BLACK);
+        g2d.setFont(new Font("Arial", Font.BOLD, 16));
+        int titleWidth = g2d.getFontMetrics().stringWidth(title);
+        g2d.drawString(title, (HIST_WIDTH - titleWidth) / 2, 20);
+
+        g2d.drawLine(MARGIN, HIST_HEIGHT - MARGIN, HIST_WIDTH - MARGIN, HIST_HEIGHT - MARGIN); // X-axis
+        g2d.drawLine(MARGIN, MARGIN, MARGIN, HIST_HEIGHT - MARGIN); // Y-axis
+
+        int maxValue = 0;
+        for (int value : histogram) {
+            if (value > maxValue) {
+                maxValue = value;
             }
         }
-        if (max == 0) {
-            max = 1;
+
+        if (maxValue == 0) {
+            maxValue = 1;
         }
 
-        // Ancho de cada barra (bin)
-        int binWidth = imageWidth / hist.length;
+        g2d.setFont(new Font("Arial", Font.PLAIN, 10));
+        g2d.drawString("0", MARGIN - 5, HIST_HEIGHT - MARGIN + 15);
+        g2d.drawString("255", HIST_WIDTH - MARGIN - 10, HIST_HEIGHT - MARGIN + 15);
+        g2d.drawString("0", MARGIN - 20, HIST_HEIGHT - MARGIN + 5);
+        g2d.drawString(String.valueOf(maxValue), MARGIN - 30, MARGIN + 10);
+        g2d.drawString("Pixel Value", HIST_WIDTH / 2 - 30, HIST_HEIGHT - 10);
 
-        // Dibujo de las barras en color negro
-        g2d.setColor(Color.BLACK);
-        for (int i = 0; i < hist.length; i++) {
-            System.out.print(hist[i] + "\t");
-            int binHeight = (int) (((double) hist[i] / max) * imageHeight);
-            int x = i * binWidth;
-            int y = imageHeight - binHeight;
-            g2d.fillRect(x, y, binWidth, binHeight);
+        g2d.rotate(-Math.PI / 2);
+        g2d.drawString("Frequency", -HIST_HEIGHT / 2 - 30, 15);
+        g2d.rotate(Math.PI / 2);
+
+        double barWidth = (double) GRAPH_WIDTH / 256;
+
+        g2d.setColor(barColor);
+        for (int i = 0; i < histogram.length; i++) {
+            int barHeight = (int) (((double) histogram[i] / maxValue) * GRAPH_HEIGHT);
+            int x = MARGIN + (int) (i * barWidth);
+            int y = HIST_HEIGHT - MARGIN - barHeight;
+            int width = Math.max(1, (int) barWidth - 1);
+            g2d.fillRect(x, y, width, barHeight);
+        }
+
+        g2d.setColor(new Color(220, 220, 220));
+        for (int i = 1; i < 5; i++) {
+            int y = HIST_HEIGHT - MARGIN - (i * GRAPH_HEIGHT / 5);
+            g2d.drawLine(MARGIN, y, HIST_WIDTH - MARGIN, y);
+            g2d.drawString(String.valueOf(i * maxValue / 5), MARGIN - 30, y + 5);
         }
 
         g2d.dispose();
-        return histogramImage;
+        return histImage;
     }
 }
