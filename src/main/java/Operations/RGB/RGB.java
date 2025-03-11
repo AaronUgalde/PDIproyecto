@@ -46,13 +46,4 @@ public class RGB implements Operation {
         }
         image.setBufferedImage(newImage);
     }
-
-    // Opcional: getters y setters si lo requieres
-    public ColorChannel getColor() {
-        return color;
-    }
-
-    public void setColor(ColorChannel color) {
-        this.color = color;
-    }
 }

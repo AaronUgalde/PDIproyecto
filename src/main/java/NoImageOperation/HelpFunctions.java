@@ -5,8 +5,36 @@ import java.awt.image.BufferedImage;
 
 public class HelpFunctions {
 
+    public static double[][] getChanel(double[][][] image, int chanel){
+        int width = image[0].length;
+        int height = image.length;
+        double[][] result = new double[height][width];
+        for(int y = 0; y < height; y++){
+            for(int x = 0; x < width; x++){
+                result[y][x] = image[y][x][chanel];
+            }
+        }
+        return result;
+    }
+
+    public static int[][] getChanel(int[][][] image, int chanel){
+        int width = image[0].length;
+        int height = image.length;
+        int[][] result = new int[height][width];
+        for(int y = 0; y < height; y++){
+            for(int x = 0; x < width; x++){
+                result[y][x] = image[y][x][chanel];
+            }
+        }
+        return result;
+    }
+
     public static int normalize(int color, int min, int max){
         return (int) (((color - min) / (double) (max - min)) * 255);
+    }
+
+    public static double[] normalize(int[] rgb){
+        return new double[]{rgb[0]/255.0, rgb[1]/255.0, rgb[2]/255.0};
     }
 
     public static int[] getRGBinArray(int pixel){
@@ -58,5 +86,18 @@ public class HelpFunctions {
             }
         }
         return image;
+    }
+
+    public static int[][] imageToMatrix(Image image){
+        int height = image.getHeight();
+        int width = image.getWidth();
+        int[][] matrix = new int[height][width];
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int pixel = image.getImage().getRGB(x, y);
+                matrix[y][x] = pixel;
+            }
+        }
+        return matrix;
     }
 }
