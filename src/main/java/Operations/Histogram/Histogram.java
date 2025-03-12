@@ -45,7 +45,7 @@ public class Histogram implements Operation {
             case Y: {
                 double[][][] yiqImage = RGBtoYIQ.apply(image);
                 double[][] channel = getChanel(yiqImage, 0);
-                histogram = getHistFromDoubleChannel(channel, 255);
+                histogram = getHistFromDoubleChannel(channel);
                 barColor = new Color(50, 50, 50);
                 title = "Y Channel Histogram (YIQ)";
                 break;
@@ -53,7 +53,7 @@ public class Histogram implements Operation {
             case V: {
                 double[][][] hsvImage = RGBtoHSV.apply(image);
                 double[][] channel = getChanel(hsvImage, 2); // V is index 2
-                histogram = getHistFromDoubleChannel(channel, 255);
+                histogram = getHistFromDoubleChannel(channel);
                 barColor = new Color(75, 75, 75);
                 title = "V Channel Histogram (HSV)";
                 break;
@@ -61,7 +61,7 @@ public class Histogram implements Operation {
             case I: {
                 double[][][] hsiImage = RGBtoHSI.apply(image);
                 double[][] channel = getChanel(hsiImage, 2); // I is index 2
-                histogram = getHistFromDoubleChannel(channel, 255);
+                histogram = getHistFromDoubleChannel(channel);
                 barColor = new Color(100, 100, 100);
                 title = "I Channel Histogram (HSI)";
                 break;
@@ -120,14 +120,14 @@ public class Histogram implements Operation {
         return histogram;
     }
 
-    private int[] getHistFromDoubleChannel(double[][] channel, double maxVal) {
+    private int[] getHistFromDoubleChannel(double[][] channel) {
         int[] histogram = new int[256];
         int height = channel.length;
         int width = channel[0].length;
 
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
-                int value = (int) Math.round((channel[y][x] / maxVal) * 255);
+                int value = (int) Math.round((channel[y][x] / (double) 255) * 255);
                 value = Math.max(0, Math.min(255, value));
                 histogram[value]++;
             }
