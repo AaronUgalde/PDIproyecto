@@ -37,6 +37,15 @@ public class HelpFunctions {
         return new double[]{rgb[0]/255.0, rgb[1]/255.0, rgb[2]/255.0};
     }
 
+    public static int[] getRGBinArray(Image image, int x, int y){
+        int pixel = image.getImage().getRGB(x, y);
+        int[] rgb = new int[3];
+        rgb[0] = (pixel >> 16) & 0xff;
+        rgb[1] = (pixel >> 8) & 0xff;
+        rgb[2] = pixel & 0xff;
+        return rgb;
+    }
+
     public static int[] getRGBinArray(int pixel){
         int[] rgb = new int[3];
         rgb[0] = (pixel >> 16) & 0xff;

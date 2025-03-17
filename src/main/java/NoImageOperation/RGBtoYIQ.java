@@ -11,8 +11,7 @@ public final class RGBtoYIQ {
         double[][][] result = new double[height][width][3];
         for(int y = 0; y < height; y++){
             for(int x = 0; x < width; x++){
-                int pixel = image.getImage().getRGB(x, y);
-                int[] rgb = getRGBinArray(pixel);
+                int[] rgb = getRGBinArray(image, x, y);
                 double[] rgbNorm = normalize(rgb);
                 double Y = 0.299*rgbNorm[0] + 0.587*rgbNorm[1] + 0.114*rgbNorm[2];
                 double I = 0.596*rgbNorm[0] - 0.274*rgbNorm[1] - 0.322*rgbNorm[2];

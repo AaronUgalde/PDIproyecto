@@ -12,8 +12,7 @@ public final class RGBtoHSV {
         double[][][] result = new double[height][width][3];
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
-                int pixel = image.getImage().getRGB(x, y);
-                int[] rgb = getRGBinArray(pixel);
+                int[] rgb = getRGBinArray(image, x, y);
                 double[] rgbNorm = normalize(rgb);
                 double max = Math.max(rgbNorm[0], Math.max(rgbNorm[1], rgbNorm[2]));
                 double min = Math.min(rgbNorm[0], Math.min(rgbNorm[1], rgbNorm[2]));
